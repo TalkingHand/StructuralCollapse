@@ -45,3 +45,11 @@ data	garage/truck doors: IsoDoor tiles with WallN/WallW (walls_garage_01/02_*, i
 data	utility poles appliances_com_01_88..95 (CanScrap, Material Log; not IsMoveAble), wires _96..135 and _143..147 (no properties)	SC breakWires; map check 2026-11-10 mapcheck.md section 8
 data	high-voltage pylons electricity_pylon_0..71 (tower: legs z0, body z1..z4, arms z5..z7; Metal, no CanScrap), lines _72..175 and _177..180 at z>=1 (_176/_181 are posts)	SC breakWires kind "pylon": nothing while a z0 leg (_0..11) is left; the last leg going removes the tower pieces and breaks the lines; spans end within 3 squares of the next tower; map check 2026-11-10
 data	Base.ElectricWire	SC WIRE_ITEM, dropped when wire spans break
+
+# Roof dismantling (1.1.0, 2026-11-10): RD = media/lua/shared/TimedActions/SCRoofDismantleAction.lua, RM = media/lua/client/StructuralCollapse_RoofMenu.lua
+lua-derive	ISBaseTimedAction (derive, new, stop, perform; setActionAnim "Build", setOverrideHandModels "Hammer")	RD
+lua-call	luautils.walkAdj(player, square, keepActions); ISWorldObjectContextMenu.equip, addToolTip; ISTimedActionQueue.add	RM
+event	OnFillWorldObjectContextMenu(playerNum, context, worldobjects, test)	RM
+java-call	ItemContainer:containsTagEval / getFirstTagEvalRecurse with ItemTag.HAMMER; IsoGameCharacter:getPerkLevel(Perks.Woodwork / MetalWelding / Strength); IsoObject:getProperties():has/get("RoofGroup"), getObjectIndex	RD RM
+data	roof sheets roofs_01..05 (two roofs each, RoofGroup odd = first), roofs_30_01..10, roofs_shallow_01, roofs_accents_*, roofs_burnt_*: kinds by picture (shingle/wood/metal/flat/trim)	RD A.kindOf
+data	Base.Nails, Base.Plank, Base.UnusableWood, Base.SmallSheetMetal, Base.ScrapMetal, Base.Hammer	RD drops; test

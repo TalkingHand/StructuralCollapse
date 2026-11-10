@@ -11,6 +11,7 @@ A Project Zomboid Build 42 mod. When nothing is left holding an upper floor up, 
 - **Free-standing and hanging objects:** street light heads, sign tops, billboards, tanks and lattice towers fall when what they stand on is removed (pieces of one object fall together). Ceiling lights and other hanging objects fall when what they hang on goes.
 - **Wires:** sledging a wooden utility pole breaks the wires hanging on it (some `Base.ElectricWire` drops). A high-voltage pylon stands while any of its 12 legs is left; when the last one goes the tower falls and its lines break.
 - **Dismantled floor tiles:** what stood on the tile falls, and a part of the floor cut off from every support comes down.
+- **Dismantle roofs:** right-click a roof piece on your own level and choose *Dismantle roof* (needs a hammer). Drops by roof kind (from the roof sheets): shingles give `Base.Nails` 50%, `Base.Plank` 20%, `Base.UnusableWood` 20%; wooden boards nails 50%, planks 30%; sheet metal `Base.SmallSheetMetal` 40%, `Base.ScrapMetal` 30%; flat roofs and trims unusable wood 20%. +3% per level of Carpentry (Metalworking for metal), at most 95%.
 - Big collapses run over several ticks (2 ms per tick), starting next to the removed support. A collapse cut off by saving finishes after loading.
 
 Checks happen only when an object is removed (no timed scans).
@@ -22,7 +23,7 @@ Checks happen only when an object is removed (no timed scans).
 
 ## Compatibility
 
-- Lua only (`media/lua/server`), no vanilla files replaced. Runs where the world is simulated: single player, or the server in multiplayer.
+- Lua only, no vanilla files replaced. The collapse (`media/lua/server`) runs where the world is simulated: single player, or the server in multiplayer. The roof menu is in `media/lua/client`, the dismantle action in `media/lua/shared`.
 - Multiplayer: not tested.
 - Safe to add to an existing save: vanilla buildings only move when you remove their supports. Removing the mod keeps what already came down where it is (emptied upper squares count as indoor rooms again after loading).
 - Checked on build 42.22.2. Vanilla code it relies on: `vanilla-deps.txt`.

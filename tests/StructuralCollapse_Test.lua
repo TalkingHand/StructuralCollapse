@@ -662,6 +662,67 @@ function T.pylonMeasureEnd()
     PZTest.log("SCTest pass " .. T.pass .. " fail " .. T.fail)
 end
 
+-- D: dismantling roof pieces (SCRoofDismantleAction). Kinds by sheet and roof group; the menu offers only roof
+-- pieces on the player's level; it needs a hammer; dismantling removes the piece and drops its materials on the
+-- floor below (chances set to 100 for the check).
+local function looseObj(x, y, z, name)
+    return IsoObject.new(getCell(), getCell():getOrCreateGridSquare(T.ox + x, T.oy + y, z), getSprite(name))
+end
+
+function T.roofKinds()
+    local A = SCRoofDismantleAction
+    ok(A ~= nil, "D: the roof dismantle action is loaded")
+    if not A then return end
+    for _, e in ipairs({ { "roofs_01_0", "shingle" }, { "roofs_01_40", "metal" }, { "roofs_02_40", "flat" },
+        { "roofs_03_0", "wood" }, { "roofs_30_07_0", "wood" }, { "roofs_30_03_0", "metal" },
+        { "roofs_accents_01_0", "trim" }, { "roofs_05_40", "shingle" } }) do
+        local k = A.kindOf(looseObj(40, 9, 1, e[1]))
+        ok(k == e[2], "D: " .. e[1] .. " is " .. e[2] .. " (" .. tostring(k) .. ")")
+    end
+    ok(A.kindOf(looseObj(40, 9, 1, WALL_N)) == nil, "D: a wall is not a roof piece")
+end
+
+function T.roofDismantle()
+    local A = SCRoofDismantleAction
+    local M = StructuralCollapseRoofMenu
+    if not A or not M then ok(false, "D: action or menu missing"); return end
+    clearBox(39, 45, 7, 13, 2)
+    local pl = getPlayer()
+    -- a roof piece up on level 1 over open ground: not on the player's level, no menu
+    local up = plain(sq(41, 9, 1), "roofs_01_0")
+    ok(#M.targets(pl, { up }) == 0, "D: no menu for a roof piece on another level")
+    -- a roof piece on the player's level next to the player
+    local px, py = math.floor(pl:getX()), math.floor(pl:getY())
+    local s0 = getCell():getGridSquare(px + 1, py, 0)
+    local near = IsoObject.new(getCell(), s0, getSprite("roofs_01_0"))
+    s0:AddTileObject(near)
+    ok(#M.targets(pl, { near }) == 1, "D: menu for a roof piece on the player's level")
+    -- tools
+    local inv = pl:getInventory()
+    local hammers = inv:getAllEvalRecurse(function(it) return it:hasTag(ItemTag.HAMMER) end)
+    for i = 0, hammers:size() - 1 do
+        local it = hammers:get(i)
+        if it:getContainer() then it:getContainer():Remove(it) end
+    end
+    ok(not A:new(pl, near):isValid(), "D: no hammer, no dismantling")
+    inv:AddItem("Base.Hammer")
+    ok(A:new(pl, near):isValid(), "D: with a hammer it can be dismantled")
+    s0:transmitRemoveItemFromSquare(near)
+    -- dismantle the piece up on level 1 (complete() directly) with every chance at 100
+    T.dropsBackup = A.DROPS.shingle
+    A.DROPS.shingle = { perk = "Woodwork", items = { { "Base.Nails", 100 }, { "Base.Plank", 100 }, { "Base.UnusableWood", 100 } } }
+    A:new(pl, up):complete()
+    A.DROPS.shingle = T.dropsBackup
+    local s1 = getCell():getGridSquare(T.ox + 41, T.oy + 9, 1)
+    local still = false
+    local objs = s1 and s1:getObjects()
+    for i = 0, (objs and objs:size() or 0) - 1 do if objs:get(i) == up then still = true end end
+    ok(not still, "D: the dismantled roof piece is gone")
+    local got = 0
+    for _, t in ipairs({ "Base.Nails", "Base.Plank", "Base.UnusableWood" }) do got = got + T.countItems(41, 9, 0, t) end
+    ok(got == 3, "D: its materials fell on the ground below (" .. got .. "/3)")
+end
+
 function T.checkBillboard()
     for y = 8, 10 do
         for lvl = 1, 2 do
@@ -1200,6 +1261,8 @@ local stages = {
     { "check X stands", T.checkPylonStands },
     { "sledge last leg X", T.sledgePylon2 },
     { "check X", T.checkPylon },
+    { "roof kinds D", T.roofKinds },
+    { "dismantle roof D", T.roofDismantle },
     { "build car V", T.buildCar },
     { "drop on car V", T.dropOnCar },
     { "check V", T.checkCar },
