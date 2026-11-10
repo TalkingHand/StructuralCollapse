@@ -1,4 +1,5 @@
 version=1
+id=3837209498
 title=[42.22.2] Structural Collapse
 description=[h1]Structural Collapse[/h1]
 description=In vanilla Build 42 you can sledgehammer every wall of a ground floor and the upper floors keep floating in the air. With this mod, when nothing is left holding an upper floor up, that floor and everything above it [b]come down one level[/b], keeping their shape.

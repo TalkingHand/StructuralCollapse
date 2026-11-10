@@ -17,7 +17,7 @@ Checks happen only when an object is removed (no timed scans).
 
 ## Install
 
-- Steam Workshop: (link after the first upload)
+- Steam Workshop: https://steamcommunity.com/sharedfiles/filedetails/?id=3837209498
 - Manual: copy `Contents/mods/StructuralCollapse` into `%USERPROFILE%\Zomboid\mods\`.
 
 ## Compatibility
