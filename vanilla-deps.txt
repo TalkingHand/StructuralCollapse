@@ -1,0 +1,47 @@
+# StructuralCollapse: vanilla dependencies (format: _guide/README.md "9. 게임 업데이트 대응")
+# checked: 42.22.2 (2026-11-10: single-player pzt, all scenes and a save round trip pass; API read from 42.21.0 decompiled source)
+# Mod file: SC = Contents/mods/StructuralCollapse/42/media/lua/server/StructuralCollapse.lua
+#
+# Riskiest (break silently):
+#  1. OnObjectAboutToBeRemoved fires for every removal on SP (IsoGridSquare.RemoveTileObject) and on the
+#     dedicated server (RemoveItemFromSquarePacket.removeItemFromMap); OnTileRemoved does not fire on the server path
+#  2. moving the same IsoObject instance: RemoveTileObject only does removeFromWorld + removeFromSquare (no reset),
+#     AddTileObject -> addToWorld re-registers; IsoCell.addToProcessIsoObject cancels the pending process removal
+#  3. support flags: WallN/WallW/WallNW/cutN/cutW (not halfheight), WallSE, stairs IsoObjectType.stairs*
+#
+# kind	target	note
+event	Events.OnObjectAboutToBeRemoved	SC; must not change squares inside (IllegalArgumentException), so only queues
+event	Events.OnTick	SC; runs the queue (also fires on the dedicated server: forageServer uses it)
+event	triggerEvent OnObjectAdded	SC placeObj; vanilla ISMoveableSpriteProps does it after placing (global object systems re-register)
+java-call	IsoGridSquare:transmitRemoveItemFromSquare(obj, false)	SC removeObj; SP = RemoveTileObject(obj,false), server = packet + removeItemFromMap
+java-call	IsoGridSquare:AddTileObject / AddSpecialObject (obj[, index])	SC placeObj; special objects (doors, windows, IsoThumpable) go back to specialObjects
+java-call	IsoObject:transmitCompleteItemToClients()	SC placeObj, server only
+java-call	IsoObject:setSquare, getSpriteGridObjectsIncludingSelf, getContainerCount/ByIndex, isTableSurface, isTableTopObject, getType, getNorth	SC
+java-call	ItemContainer:setSourceGrid, getItems, removeAllItems, removeItemsFromProcessItems	SC
+java-call	IsoGridSquare:getFloor, getObjects, getSpecialObjects, getStaticMovingObjects, getVehicleContainer, isBlockedTo, AddWorldInventoryItem(item,x,y,z,true), AddWorldInventoryItem(type,x,y,z)	SC
+java-call	IsoCell:getGridSquare, getOrCreateGridSquare, getChunkForGridSquare	SC
+java-call	IsoWorldInventoryObject:getItem, getOffX/Y/Z; InventoryItem:setWorldItem	SC moveObj
+java-call	IsoThumpable:hasBuildMaterials, getBuildMaterials, isDoor, isWindow	SC
+lua-call	ISMoveableSpriteProps.new(sprite).canScrap/material/material2/material3	shared/Moveables/ISMoveableSpriteProps.lua:99-104
+lua-call	ISMoveableDefinitions:getInstance().getScrapDefinition(mat) -> returnItems/returnItemsStatic {returnItem, maxAmount, chancePerRoll}	shared/Moveables/ISMoveableDefinitions.lua:160
+lua-call	buildUtil.getStairObjects(obj, true)	server/BuildingObjects/ISBuildUtil.lua:495
+data	walls_exterior_wooden_01_27 (WoodenPole / wall corner), carpentry_02_94/95 (stair pillars)	SC POLE_SPRITES; SpriteConfig has no public isPole()
+assume	player-built drops: 50% per build material	vanilla ISBuildingObject.onDestroy (server/BuildingObjects/ISBuildingObject.lua:39)
+assume	zombies cannot thump plain map walls	IsoObject.getThumpableFor returns null unless moved furniture / breakable fence
+java-call	BodyPart:AddDamage, setCut; BodyDamage:getBodyPart(BodyPartType.Head); BodyPartType.ToIndex	SC hitBelow (players)
+java-call	IsoGameCharacter:getBodyPartClothingDefense(index, false, false)	SC hitBelow; the head scratch defense % the protection panel shows (client/XpSystem/ISUI/ISCharacterProtection.lua:78)
+java-call	IsoZombie:setHealth, getHealth, knockDown, Kill(nil)	SC hitBelow (zombies)
+java-call	IsoGridSquare:getMovingObjects	SC hitBelow
+data	IsoObjectType.WestRoofB/M/T, IsoFlagType.isEave, tile property RoofGroup	SC isRoofObj; 42.22.2 newtiledefinitions: roof tiles have no collision and (except ~26 flat ones) no solidfloor
+assume	the sledgehammer cursor can destroy roof tiles	server/BuildingObjects/ISDestroyCursor.lua canDestroy has no roof exclusion (fallen roofs are removable)
+java-call	IsoDeadBody:becomeCorpseItem(false); IsoGridSquare:tryAddCorpseToWorld(item, x, y, true), getDeadBodys	SC dropBodies; vanilla corpse item path (server sends the corpse)
+java-call	IsoGridSquare:setRoomID(-1), RecalcProperties, getRoomID	SC clearRoom; RecalcProperties sets exterior when no room and no roof
+assume	square room ids are rebuilt from map data on every load (IsoGridSquare.save/load hold no room)	SC re-clears them in Events.LoadGridsquare from global ModData
+event	Events.LoadGridsquare, Events.OnInitGlobalModData; ModData.getOrCreate("StructuralCollapse")	SC rooms + resume of collapses cut by a save
+java-call	BaseVehicle:getPartCount, getPartByIndex, transmitPartCondition, getScriptName; VehiclePart:getCondition, setCondition; IsoGridSquare:getVehicleContainer; IsoCell:getVehicles (a java Set in 42.22.2, read through ArrayList.new; empty getVehicleContainer on most squares a car covers)	SC vehicleAt (hitBelow, free tiles for furniture)
+assume	IsoAnimal extends IsoPlayer	SC hitBelow checks IsoAnimal first
+assume	the sledgehammer cursor only works on the player own level (ISDestroyStuffAction range check is x/y only)	why level-1 roofs drop when their layer has no support
+data	garage/truck doors: IsoDoor tiles with WallN/WallW (walls_garage_01/02_*, industry_trucks_01_32..37, 42 types)	SC wallEdges counts them as walls (decided 2026-11-10)
+data	utility poles appliances_com_01_88..95 (CanScrap, Material Log; not IsMoveAble), wires _96..135 and _143..147 (no properties)	SC breakWires; map check 2026-11-10 mapcheck.md section 8
+data	high-voltage pylons electricity_pylon_0..71 (tower: legs z0, body z1..z4, arms z5..z7; Metal, no CanScrap), lines _72..175 and _177..180 at z>=1 (_176/_181 are posts)	SC breakWires kind "pylon": nothing while a z0 leg (_0..11) is left; the last leg going removes the tower pieces and breaks the lines; spans end within 3 squares of the next tower; map check 2026-11-10
+data	Base.ElectricWire	SC WIRE_ITEM, dropped when wire spans break

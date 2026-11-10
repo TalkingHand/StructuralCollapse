@@ -1,0 +1,8 @@
+name=Structural Collapse
+id=StructuralCollapse
+description=When every wall, pillar and staircase under an upper floor is gone, that floor and everything above it drop one level. Overlapping furniture moves to the nearest free tile or breaks into its parts.
+poster=poster.png
+author=TalkingHand
+url=https://github.com/TalkingHand/StructuralCollapse
+modversion=1.0.0
+versionMin=42.0
