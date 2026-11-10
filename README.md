@@ -24,7 +24,7 @@ Checks happen only when an object is removed (no timed scans).
 ## Compatibility
 
 - Lua only, no vanilla files replaced. The collapse (`media/lua/server`) runs where the world is simulated: single player, or the server in multiplayer. The roof menu is in `media/lua/client`, the dismantle action in `media/lua/shared`.
-- Multiplayer: not tested.
+- Multiplayer: works (checked in play; the automated tests are single player).
 - Safe to add to an existing save: vanilla buildings only move when you remove their supports. Removing the mod keeps what already came down where it is (emptied upper squares count as indoor rooms again after loading).
 - Checked on build 42.22.2. Vanilla code it relies on: `vanilla-deps.txt`.
 
